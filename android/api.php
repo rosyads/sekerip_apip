@@ -253,7 +253,7 @@
             break;
         case 'refresh_student':
             
-            if(isValid(array('nis'))){
+            if(isValid(array('username'))){
                 $nis = $_POST['username'];
 
                 //creating the check query 
