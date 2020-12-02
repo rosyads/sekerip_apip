@@ -42,7 +42,55 @@
           <!-- Page Heading -->
           <h1 class="h3 mb-4 text-gray-800">Keuangan</h1>
 
-          
+          <!-- query ambil data -->
+          <?php 
+            $sql="SELECT nis,nama,saldo 
+                FROM siswa";
+            $res=mysqli_query($link,$sql);
+            $ketemu=mysqli_num_rows($res);
+          ?>
+          <!-- end query ambil data -->
+
+          <!-- tabel guru -->
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">Data Saldo Siswa</h6>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                  <thead>
+                    <tr>
+                      <th>NIS</th>
+                      <th>Nama</th>
+                      <th>Saldo</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php 
+                      if($ketemu){
+                        foreach($res as $data){
+                          ?>
+                            <tr>
+                              <td><?php echo "$data[nis]"; ?></td>
+                              <td><?php echo "$data[nama]"; ?></td>
+                              <td><?php echo "$data[saldo]"; ?></td>
+                              <td><?php echo "<a class='btn btn-success' href='tambah_saldo.php?id=$data[nis]'>Tambah</a> "; 
+                                   echo "<a class='btn btn-warning' href='edit_saldo.php?id=$data[nis]'>Edit</a> "; ?></td>
+                            </tr>
+                          <?php
+                        }
+                      }else{?>
+                        <tr><td colspan="3"><center>Tidak ada data.</td><center></tr><?php
+                      }
+                    ?>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <!-- end tabel guru -->
 
         </div>
         <!-- /.container-fluid -->

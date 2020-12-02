@@ -113,43 +113,6 @@
             } else {
                 $response['error'] = true; 
                 $response['message'] = 'Invalid data.';
-
-                $username = "181907002";
-                $password = "020306";
-
-                //creating the check query 
-                $stmt = $link->prepare("SELECT id_akun, username, role, siswa.nama, kelas.nama_kelas, siswa.tgl_lahir, 
-                siswa.Agama, siswa.id_kelas, siswa.saldo
-                FROM akun 
-                INNER JOIN siswa
-                    ON akun.username = siswa.nis 
-                INNER JOIN kelas
-                    ON siswa.id_kelas = kelas.id_kelas
-                WHERE username = ? AND password = ?");
-                $stmt->bind_param("ss",$username, $password);
-                $stmt->execute();
-                $stmt->store_result();
-
-                //if the user exist with given credentials 
-                if($stmt->num_rows > 0) {
-                    $stmt->bind_result($id, $username, $role, $nama, $kelas, $tgl_lahir, $agama, $id_kelas, $saldo);
-                    $stmt->fetch();
-
-                    $user = array(
-                    'id'=>$id, 
-                    'username'=>$username, 
-                    'role'=>$role,
-                    'nama'=>$nama,
-                    'kelas'=>$kelas,
-                    'tgl_lahir'=>$tgl_lahir,
-                    'agama'=>$agama,
-                    'id_kelas'=>$id_kelas,
-                    'saldo' => $saldo
-                    );
-                    $response['error'] = false; 
-                    $response['message'] = 'Login successfull'; 
-                    $response['user'] = $user; 
-                }
             }
             break;
         case 'absen':
@@ -195,114 +158,6 @@
                 }else{
                     $response['error'] = true; 
                     $response['message'] = 'Absen gagal';
-                }
-            } else {
-                $response['error'] = true; 
-                $response['message'] = 'Invalid data.';
-            }
-            break;
-        case 'bayar':
-            if(isValid(array('nis', 'kelas', 'tahun', 'bulan', 'tanggal', 'jam', 'type', 'bulanBayar', 'nominal'))){
-                //getting values 
-                $nis = $_POST['nis'];
-                $kelas = $_POST['kelas'];
-                $tahun = $_POST['tahun']; 
-                $bulan = $_POST['bulan'];
-                $tanggal = $_POST['tanggal']; 
-                $jam = $_POST['jam'];
-                $type = $_POST['type'];
-                $bulanBayar = $_POST['bulanBayar'];
-                $nominal = $_POST['nominal'];
-                                        
-                $date = date("Y-m-d");
-
-                if($bulan > 6){
-                    $semester = "ganjil";
-                    $tahun_ajar = $tahun."/".($tahun+1);
-                }else{
-                    $semester = "genap";
-                    $tahun_ajar = ($tahun-1)."/".$tahun;
-                }
-
-                $sqlCheck = "SELECT * FROM bayar 
-                            WHERE tahun_ajar='$tahun_ajar' && semester='$semester' && bulan='$bulanBayar'
-                            && tanggal_bayar='$date' && alokasi='SPP' && nis='$nis' && nominal='$nominal'";
-                $resCheck = mysqli_query($link,$sqlCheck);
-                $ketemu = mysqli_num_rows($resCheck);
-                if($ketemu == 0){
-                    $sqlBayar = "INSERT INTO bayar(tahun_ajar,semester,bulan,tanggal_bayar,alokasi,nis,nominal)
-                        VALUES ('$tahun_ajar','$semester','$bulanBayar','$date','SPP','$nis','$nominal')";
-                    $resBayar = mysqli_query($link,$sqlBayar);
-                    $sqlSaldo = "UPDATE siswa 
-                            SET saldo = saldo-200000 
-                            WHERE nis='$nis'";
-                    $resSaldo = mysqli_query($link,$sqlSaldo);
-                    $ketemuBayar = $resBayar;
-                    $ketemuSaldo = $resSaldo;
-                    if($ketemu && $ketemu1){
-                        $response['error'] = false; 
-                        $response['message'] = 'Pembayaran Berhasil';   
-                    }else{
-                        $response['error'] = true; 
-                        $response['message'] = 'Pembayaran gagal';
-                    }
-                }else{
-                    $response['error'] = true;
-                    $response['message'] = 'Pembayaran sudah dilakukan';
-                }
-            } else {
-                $response['error'] = true; 
-                $response['message'] = 'Invalid data.';
-            }
-            break;
-            case 'bayar':
-            if(isValid(array('nis', 'kelas', 'tahun', 'bulan', 'tanggal', 'jam', 'type', 'bulanBayar', 'nominal'))){
-                //getting values 
-                $nis = $_POST['nis'];
-                $kelas = $_POST['kelas'];
-                $tahun = $_POST['tahun']; 
-                $bulan = $_POST['bulan'];
-                $tanggal = $_POST['tanggal']; 
-                $jam = $_POST['jam'];
-                $type = $_POST['type'];
-                $bulanBayar = $_POST['bulanBayar'];
-                $nominal = $_POST['nominal'];
-                                        
-                $date = date("Y-m-d");
-
-                if($bulan > 6){
-                    $semester = "ganjil";
-                    $tahun_ajar = $tahun."/".($tahun+1);
-                }else{
-                    $semester = "genap";
-                    $tahun_ajar = ($tahun-1)."/".$tahun;
-                }
-
-                $sqlCheck = "SELECT * FROM bayar 
-                            WHERE tahun_ajar='$tahun_ajar' && semester='$semester' && bulan='$bulanBayar'
-                            && tanggal_bayar='$date' && alokasi='SPP' && nis='$nis' && nominal='$nominal'";
-                $resCheck = mysqli_query($link,$sqlCheck);
-                $ketemu = mysqli_num_rows($resCheck);
-                if($ketemu == 0){
-                    $sqlBayar = "INSERT INTO bayar(tahun_ajar,semester,bulan,tanggal_bayar,alokasi,nis,nominal)
-                        VALUES ('$tahun_ajar','$semester','$bulanBayar','$date','SPP','$nis','$nominal')";
-                    $resBayar = mysqli_query($link,$sqlBayar);
-                    $sqlSaldo = "UPDATE siswa 
-                            SET saldo = saldo-200000 
-                            WHERE nis='$nis'";
-                    $resSaldo = mysqli_query($link,$sqlSaldo);
-                    $ketemuBayar = $resBayar;
-                    $ketemuSaldo = $resSaldo;
-                    if($ketemu && $ketemu1){
-                        $response['error'] = false; 
-                        $response['message'] = 'Pembayaran Berhasil';   
-                    }else{
-                        $response['error'] = true; 
-                        $response['message'] = 'Pembayaran gagal';
-                    }
-                }else{
-                    $response['error'] = true;
-                    $response['message'] = 'Pembayaran sudah dilakukan';
                 }
             } else {
                 $response['error'] = true; 
@@ -394,6 +249,46 @@
             } else {
                 $response['error'] = true; 
                 $response['message'] = 'Invalid data.';
+            }
+            break;
+        case 'refresh_student':
+            $nis = "181907002";
+            //creating the check query 
+            $stmt = $link->prepare("SELECT id_akun, username, role, siswa.nama, kelas.nama_kelas, siswa.tgl_lahir, 
+                                        siswa.Agama, siswa.id_kelas, siswa.saldo
+                                    FROM akun 
+                                    INNER JOIN siswa
+                                        ON akun.username = siswa.nis 
+                                    INNER JOIN kelas
+                                        ON siswa.id_kelas = kelas.id_kelas
+                                    WHERE username = ?");
+            $stmt->bind_param("s",$nis);
+            $stmt->execute();
+            $stmt->store_result();
+
+            //if the user exist with given credentials 
+            if($stmt->num_rows > 0) {
+                $stmt->bind_result($id, $username, $role, $nama, $kelas, $tgl_lahir, $agama, $id_kelas, $saldo);
+                $stmt->fetch();
+
+                $user = array(
+                'id'=>$id, 
+                'username'=>$username, 
+                'role'=>$role,
+                'nama'=>$nama,
+                'kelas'=>$kelas,
+                'tgl_lahir'=>$tgl_lahir,
+                'agama'=>$agama,
+                'id_kelas'=>$id_kelas,
+                'saldo' => $saldo
+                );
+                $response['error'] = false; 
+                $response['message'] = 'Login successfull'; 
+                $response['user'] = $user; 
+            }else{
+                //if the user not found 
+                $response['error'] = true; 
+                $response['message'] = 'Invalid username or password';
             }
             break;
         default:
