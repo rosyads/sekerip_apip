@@ -76,13 +76,12 @@
                               <td><?php echo "$data[nis]"; ?></td>
                               <td><?php echo "$data[nama]"; ?></td>
                               <td><?php echo "$data[saldo]"; ?></td>
-                              <td><?php echo "<a class='btn btn-success' href='tambah_saldo.php?id=$data[nis]'>Tambah</a> "; 
-                                   echo "<a class='btn btn-warning' href='edit_saldo.php?id=$data[nis]'>Edit</a> "; ?></td>
+                              <td><?php echo "<a class='btn btn-success' href='tambah_saldo.php?id=$data[nis]'>Tambah</a> "; ?></td>
                             </tr>
                           <?php
                         }
                       }else{?>
-                        <tr><td colspan="3"><center>Tidak ada data.</td><center></tr><?php
+                        <tr><td colspan="4"><center>Tidak ada data.</td><center></tr><?php
                       }
                     ?>
                   </tbody>

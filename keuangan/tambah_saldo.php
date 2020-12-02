@@ -50,7 +50,7 @@
 
                 if($ketemu){
                     while($data=mysqli_fetch_array($res)){ ?>
-                        <form method="POST" action="proses_edit_siswa.php" name="fedit" onsubmit="return validasi()">
+                        <form method="POST" action="proses_tambah_saldo_siswa.php" name="ftambah" onsubmit="return validasi()">
                             <div class="table-responsive">
                                 <table class="table table-bordered" id="dataTable" width="50%" cellspacing="0">
                                     <thead>
@@ -68,7 +68,7 @@
                                     <tr><th>Saldo</th> <td><?php echo "<input type ='text' name='saldo' required autocomplete='off'>"; ?></td></tr>
                                 </thead>
                                 </table>
-                                <hr><center><input type='submit' class="btn btn-primary" name='btn_submit' value='Edit'></center>
+                                <hr><center><input type='submit' class="btn btn-primary" name='btn_submit' value='Tambah Saldo'></center>
                             </div>
                         </form>
                     <?php
@@ -113,7 +113,7 @@
   <script>
       function validasi(){
         var nomor= /^[0-9]+$/;
-        
+
         var saldo = documents.forms["ftambah"]["saldo"].value;
 
         if(!saldo.match(nomor)){
