@@ -252,43 +252,48 @@
             }
             break;
         case 'refresh_student':
-            $nis = "181907002";
-            //creating the check query 
-            $stmt = $link->prepare("SELECT id_akun, username, role, siswa.nama, kelas.nama_kelas, siswa.tgl_lahir, 
-                                        siswa.Agama, siswa.id_kelas, siswa.saldo
-                                    FROM akun 
-                                    INNER JOIN siswa
-                                        ON akun.username = siswa.nis 
-                                    INNER JOIN kelas
-                                        ON siswa.id_kelas = kelas.id_kelas
-                                    WHERE username = ?");
-            $stmt->bind_param("s",$nis);
-            $stmt->execute();
-            $stmt->store_result();
+            
+            if(isValid(array('nis'))){
+                $nis = $_POST['username'];
 
-            //if the user exist with given credentials 
-            if($stmt->num_rows > 0) {
-                $stmt->bind_result($id, $username, $role, $nama, $kelas, $tgl_lahir, $agama, $id_kelas, $saldo);
-                $stmt->fetch();
+                //creating the check query 
+                $stmt = $link->prepare("SELECT id_akun, username, role, siswa.nama, kelas.nama_kelas, siswa.tgl_lahir, 
+                                            siswa.Agama, siswa.id_kelas, siswa.saldo
+                                        FROM akun 
+                                        INNER JOIN siswa
+                                            ON akun.username = siswa.nis 
+                                        INNER JOIN kelas
+                                            ON siswa.id_kelas = kelas.id_kelas
+                                        WHERE username = ?");
+                $stmt->bind_param("s",$nis);
+                $stmt->execute();
+                $stmt->store_result();
 
-                $user = array(
-                'id'=>$id, 
-                'username'=>$username, 
-                'role'=>$role,
-                'nama'=>$nama,
-                'kelas'=>$kelas,
-                'tgl_lahir'=>$tgl_lahir,
-                'agama'=>$agama,
-                'id_kelas'=>$id_kelas,
-                'saldo' => $saldo
-                );
-                $response['error'] = false; 
-                $response['message'] = 'Login successfull'; 
-                $response['user'] = $user; 
-            }else{
-                //if the user not found 
-                $response['error'] = true; 
-                $response['message'] = 'Invalid username or password';
+                //if the user exist with given credentials 
+                if($stmt->num_rows > 0) {
+                    $stmt->bind_result($id, $username, $role, $nama, $kelas, $tgl_lahir, $agama, $id_kelas, $saldo);
+                    $stmt->fetch();
+
+                    $user = array(
+                        'id'=>$id, 
+                        'username'=>$username, 
+                        'role'=>$role,
+                        'nama'=>$nama,
+                        'kelas'=>$kelas,
+                        'tgl_lahir'=>$tgl_lahir,
+                        'agama'=>$agama,
+                        'id_kelas'=>$id_kelas,
+                        'saldo' => $saldo
+                    );
+                    $response['error'] = false; 
+                    $response['message'] = 'Login successfull'; 
+                    $response['user'] = $user; 
+                }else{
+                    //if the user not found 
+                    $response['error'] = true; 
+                    $response['message'] = 'Invalid username or password';
+                }
+
             }
             break;
         default:
