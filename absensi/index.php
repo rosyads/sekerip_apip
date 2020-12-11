@@ -11,7 +11,28 @@
     }
 
   }
+  date_default_timezone_set("Asia/Jakarta");
+  $tahun = date("Y");
+  $bulan = date("m");
+  $tanggal = date("d");
+  $nama_bulan = array("","Januari","Februari","Maret","April","Mei","Juni",
+                      "Juli","Agustus","September","Oktober","November","Desember");
+
   $nama_kelas= [];
+  $absen_bulan = [];
+  $absen_tanggal = [];
+
+  $chartName = [];
+
+  //fungsi ngecek udah ada data yg dicari di array atau belum
+  function in_array_r($needle, $haystack, $strict = false) {
+    foreach ($haystack as $item) {
+        if (($strict ? $item === $needle : $item == $needle) || (is_array($item) && in_array_r($needle, $item, $strict))) {
+            return true;
+        }
+    }
+    return false;
+  }
   
 ?>
 <!DOCTYPE html>
@@ -186,26 +207,41 @@
                   
                   // start insert data to array
                   // TODO insert data to array
-                  // if($found){
-                  //   foreach($res as $data){
-                  //     echo "$data[tanggal_absen]";
-                  //     echo "$data[nis]";
-                  //     echo "$data[nama]";
-                  //     echo "$data[hari]";
-                  //     echo "$data[jampel]";
-                  //     echo "$data[jam_absen]";
-                  //     echo "$data[nama_matpel]";
-                  //   }
-                  // }
+                  if($found){
+                    foreach($res as $data){
+                      //kelompokin berdasarkan bulan
+                      // if(in_array_r(substr($data['tanggal_absen'],5,2),$absen_bulan)){
+
+                      // }else{
+                        
+                      //   array_push($absen_bulan,substr($data['tanggal_absen'],5,2));
+                      // }
+                      //atas ga kepake (atau belum).
+
+                      //TODO 
+                      //ambil data hari weekdays dlm 6 bulan (1 semester). 
+                      //itung hari sampe hari ini. 
+                      //masukkin semuanya
+                      //dalam seminggu 40 jampel, sebulan 160 jampel
+                      //dibagi banyak siswa
+
+
+
+                      echo "$data[tanggal_absen] </BR>";
+                      echo "$data[nis] </BR>";
+                      echo "$data[nama] </BR>";
+                      echo "$data[hari] </BR>";
+                      echo "$data[jampel] </BR>";
+                      echo "$data[jam_absen] </BR>";
+                      echo "$data[nama_matpel] </BR> </BR>";
+                    }
+                    echo $nama_kelas[$jml_kelas]." = ".$foundJml."<br>";
+                    print_r($absen_bulan); echo "<br>";
+                  }
 
                   // end insert data to array
+                  ?>
                   
-                  
-                  $jml_kelas++;
-                }
-              
-              }
-            }?>
                   <!-- start chart -->
                   <div class="row">
 
@@ -214,11 +250,12 @@
                       <!-- Area Chart -->
                       <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                          <h6 class="m-0 font-weight-bold text-primary">Chart Absensi</h6>
+                          <h6 class="m-0 font-weight-bold text-primary">Chart Absensi <?php echo $nama_kelas[$jml_kelas]; ?></h6>
                         </div>
                         <div class="card-body">
                           <div class="chart-area">
-                            <canvas id="chartAbsensi"></canvas>
+                            <canvas id="chartAbsensi<?php echo $nama_kelas[$jml_kelas]; ?>"></canvas>
+                            <?php array_push($chartName, "chartAbsensi".$nama_kelas[$jml_kelas]); ?>
                           </div>
                         </div>
                       </div>
@@ -226,7 +263,17 @@
                     </div>
 
                   </div>
-                  <!-- end chart -->
+                  <!-- end chart --><?php
+                  
+                  $jml_kelas++;
+                }
+
+                echo $jml_kelas;
+                print_r($chartName); echo "<BR>";
+              
+              }
+            }?>
+                  
             
             
 
@@ -262,88 +309,130 @@
   <!-- Core plugin JavaScript-->
   <script src="../vendor/jquery-easing/jquery.easing.min.js"></script>
 
+  <!-- Page level plugins -->
+  <script src="../vendor/chart.js/Chart.min.js"></script>
+
   <!-- Custom scripts for all pages-->
   <script src="../js/sb-admin-2.min.js"></script>
 
   <script>
-    var ctx = document.getElementById("Chart");
-    var myBarChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ["January", "February", "March", "April", "May", "June"],
-        datasets: [{
-          label: "Revenue",
-          backgroundColor: "#4e73df",
-          hoverBackgroundColor: "#2e59d9",
-          borderColor: "#4e73df",
-          data: [4215, 5312, 6251, 7841, 9821, 14984],
-        }],
-      },
-      options: {
-        maintainAspectRatio: false,
-        layout: {
-          padding: {
-            left: 10,
-            right: 25,
-            top: 25,
-            bottom: 0
-          }
-        },
-        scales: {
-          xAxes: [{
-            time: {
-              unit: 'month'
-            },
-            gridLines: {
-              display: false,
-              drawBorder: false
-            },
-            ticks: {
-              maxTicksLimit: 6
-            },
-            maxBarThickness: 25,
-          }],
-          yAxes: [{
-            ticks: {
-              min: 0,
-              max: 15000,
-              maxTicksLimit: 5,
-              padding: 10,
-              // Include a dollar sign in the ticks
-              callback: function(value, index, values) {
-                return '$' + number_format(value);
-              }
-            },
-            gridLines: {
-              color: "rgb(234, 236, 244)",
-              zeroLineColor: "rgb(234, 236, 244)",
-              drawBorder: false,
-              borderDash: [2],
-              zeroLineBorderDash: [2]
-            }
-          }],
-        },
-        legend: {
-          display: false
-        },
-        tooltips: {
-          titleMarginBottom: 10,
-          titleFontColor: '#6e707e',
-          titleFontSize: 14,
-          backgroundColor: "rgb(255,255,255)",
-          bodyFontColor: "#858796",
-          borderColor: '#dddfeb',
-          borderWidth: 1,
-          xPadding: 15,
-          yPadding: 15,
-          displayColors: false,
-          caretPadding: 10,
-          callbacks: {
-            label: "%"
-          }
-        },
+
+    // Set new default font family and font color to mimic Bootstrap's default styling
+    Chart.defaults.global.defaultFontFamily = 'Nunito', '-apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+    Chart.defaults.global.defaultFontColor = '#858796';
+
+    var jml_kelas = <?php echo $jml_kelas; ?>;
+    var arr_nama_kelas = <?php echo '["'.implode('","',$chartName).'"]'; ?>;
+    
+    for(i=0;i<jml_kelas;i++){
+      makeChart(arr_nama_kelas[i]);
+    }
+
+    function number_format(number, decimals, dec_point, thousands_sep) {
+      // *     example: number_format(1234.56, 2, ',', ' ');
+      // *     return: '1 234,56'
+      number = (number + '').replace(',', '').replace(' ', '');
+      var n = !isFinite(+number) ? 0 : +number,
+        prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
+        sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
+        dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+        s = '',
+        toFixedFix = function(n, prec) {
+          var k = Math.pow(10, prec);
+          return '' + Math.round(n * k) / k;
+        };
+      // Fix for IE parseFloat(0.55).toFixed(0) = 0;
+      s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
+      if (s[0].length > 3) {
+        s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
       }
-    });
+      if ((s[1] || '').length < prec) {
+        s[1] = s[1] || '';
+        s[1] += new Array(prec - s[1].length + 1).join('0');
+      }
+      return s.join(dec);
+    }
+
+    function makeChart(chartName){
+      var ctx = document.getElementById(chartName);
+      var myBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ["January", "February", "March", "April", "May", "June"],
+          datasets: [{
+            label: "Revenue",
+            backgroundColor: "#4e73df",
+            hoverBackgroundColor: "#2e59d9",
+            borderColor: "#4e73df",
+            data: [4215, 5312, 6251, 7841, 9821, 14984],
+          }],
+        },
+        options: {
+          maintainAspectRatio: false,
+          layout: {
+            padding: {
+              left: 10,
+              right: 25,
+              top: 25,
+              bottom: 0
+            }
+          },
+          scales: {
+            xAxes: [{
+              time: {
+                unit: 'month'
+              },
+              gridLines: {
+                display: false,
+                drawBorder: false
+              },
+              ticks: {
+                maxTicksLimit: 6
+              },
+              maxBarThickness: 25,
+            }],
+            yAxes: [{
+              ticks: {
+                min: 0,
+                max: 15000,
+                maxTicksLimit: 5,
+                padding: 10,
+                // Include a dollar sign in the ticks
+                callback: function(value, index, values) {
+                  return '$' + number_format(value);
+                }
+              },
+              gridLines: {
+                color: "rgb(234, 236, 244)",
+                zeroLineColor: "rgb(234, 236, 244)",
+                drawBorder: false,
+                borderDash: [2],
+                zeroLineBorderDash: [2]
+              }
+            }],
+          },
+          legend: {
+            display: false
+          },
+          tooltips: {
+            titleMarginBottom: 10,
+            titleFontColor: '#6e707e',
+            titleFontSize: 14,
+            backgroundColor: "rgb(255,255,255)",
+            bodyFontColor: "#858796",
+            borderColor: '#dddfeb',
+            borderWidth: 1,
+            xPadding: 15,
+            yPadding: 15,
+            displayColors: false,
+            caretPadding: 10,
+            callbacks: {
+              label: "%"
+            }
+          },
+        }
+      });
+    }
   </script>
 
 </body>
