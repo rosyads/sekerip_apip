@@ -12,17 +12,63 @@
 
   }
   date_default_timezone_set("Asia/Jakarta");
+  /*
+  fungsi cek hari senin-jumat doang
+  tambahin jampel per hari (senin&kamis => +8, selasa&rabu => +9, jumat => +6)
+  */
   $tahun = date("Y");
   $bulan = date("m");
   $tanggal = date("d");
-  $nama_bulan = array("","Januari","Februari","Maret","April","Mei","Juni",
-                      "Juli","Agustus","September","Oktober","November","Desember");
+  $dateAkhir = $tahun."-".$bulan."-".$tanggal;
+  $dateAwal = $tahun."-".$bulan."-1";
+  // echo "date awal ".$dateAwal."<BR>";
+  // echo "date akhir ".$dateAkhir."<BR>";
+  $i = 1;
+  $counter = 0;
+  $jampel = 0;
+  $timestamp1 = strtotime($dateAwal);
+  $timestamp2 = strtotime($dateAkhir);
+  while($timestamp1 <= $timestamp2){
+    $day = date('w', $timestamp1);
+      if($day != '0' && $day != '6'){ //skip sabtu minggu
+        // echo "Today is " .$day."<br>";
+          $counter++;
+          if($day == '1' || $day == '4'){ //senin kamis
+            $jampel = $jampel +8;
+          }else if($day == '2' || $day == '3'){ //selasa rabu
+            $jampel = $jampel +9;
+          }else if($day == '5'){ //jumat
+            $jampel = $jampel +6;
+          }
+      }
+      
+      $i++;
+      $string = $tahun.'-'.$bulan.'-'.$i;
+      $timestamp1 = strtotime($string);
+  }
+  // echo "<br>total hari   ".$counter;
+  // echo "<br>total jampel ".$jampel;
+
+  $nama_bulan = array("Juli","Agustus","September","Oktober","November","Desember",
+                      "Januari","Februari","Maret","April","Mei","Juni");
 
   $nama_kelas= [];
   $absen_bulan = [];
   $absen_tanggal = [];
 
   $chartName = [];
+
+  $siswa = array(
+      'kelas' => [],
+      'nis' => [],
+      'jml' => [],
+      'persen' => []
+  ); 
+
+  // print_r($siswa);
+
+  // array_push($siswa['nis'], "1234"); echo "<br>";
+  // print_r($siswa);
 
   //fungsi ngecek udah ada data yg dicari di array atau belum
   function in_array_r($needle, $haystack, $strict = false) {
@@ -80,6 +126,7 @@
 
           <?php
             if(isset($kd_guru)){
+              //Akun Guru
               $sql="SELECT DISTINCT jadwal.id_kelas,kelas.nama_kelas 
                     FROM jadwal
                     INNER JOIN kelas
@@ -201,45 +248,70 @@
                               WHERE kelas.nama_kelas='$nama_kelas[$jml_kelas]'";
                   $resKelas = mysqli_query($link,$sqlKelas);
                   $foundJml = mysqli_num_rows($resKelas);
+
                   echo $nama_kelas[$jml_kelas]." = ".$foundJml."<br>";
-                  //TODO: masukin array utk label sama data2nya
                   // end query ambil data
                   
                   // start insert data to array
                   // TODO insert data to array
                   if($found){
                     foreach($res as $data){
-                      //kelompokin berdasarkan bulan
-                      // if(in_array_r(substr($data['tanggal_absen'],5,2),$absen_bulan)){
+                      //TODO
+                      /* masukkin semuanya */
+                      //add per nis
+                      //itung udh brp banyak jampel yg nis itu absen
+                      //dapet tingkat kehadiran per siswa
 
-                      // }else{
+                      //cek nis udh ada atau belom
+                      if(in_array_r($data['nis'],$siswa['nis'],false)){
+                        $id = array_search($data['nis'], $siswa['nis']);
+
+                        $jampel_siswa = $siswa['jml'][$id];
+                        $jampel_siswa++;
+                        $siswa['jml'][$id] = $jampel_siswa;
+                        echo $jampel_siswa."<br>";
+
+                        $persen = $siswa['persen'][$id];
+                        $persen = number_format(($jampel_siswa/$jampel)*100,2);
+                        $siswa['persen'][$id] = $persen;
                         
-                      //   array_push($absen_bulan,substr($data['tanggal_absen'],5,2));
-                      // }
-                      //atas ga kepake (atau belum).
-
-                      //TODO 
-                      //ambil data hari weekdays dlm 6 bulan (1 semester). 
-                      //itung hari sampe hari ini. 
-                      //masukkin semuanya
-                      //dalam seminggu 40 jampel, sebulan 160 jampel
-                      //dibagi banyak siswa
-
-
+                      }else{
+                        array_push($siswa['kelas'], $nama_kelas[$jml_kelas]);
+                        array_push($siswa['nis'], $data['nis']);
+                        array_push($siswa['jml'], 0);
+                        array_push($siswa['persen'], 0);
+                      }
 
                       echo "$data[tanggal_absen] </BR>";
                       echo "$data[nis] </BR>";
-                      echo "$data[nama] </BR>";
-                      echo "$data[hari] </BR>";
-                      echo "$data[jampel] </BR>";
-                      echo "$data[jam_absen] </BR>";
-                      echo "$data[nama_matpel] </BR> </BR>";
+                      // echo "$data[nama] </BR>";
+                      // echo "$data[hari] </BR>";
+                      // echo "$data[jampel] </BR>";
+                      // echo "$data[jam_absen] </BR>";
+                      // echo "$data[nama_matpel] </BR> </BR>";
                     }
                     echo $nama_kelas[$jml_kelas]." = ".$foundJml."<br>";
-                    print_r($absen_bulan); echo "<br>";
+                    // print_r($absen_bulan); echo "<br>";
                   }
 
                   // end insert data to array
+
+                  /* buat persentase */
+                  //tambah tingkat kehadiran semua siswa per kelas
+                  //bagi banyak siswa per kelas
+                  
+                  echo "<br>";
+                  $arrayKey = array_keys($siswa['kelas'],$nama_kelas[$jml_kelas]);
+                  print_r($arrayKey); echo "<BR>";
+                  $persen_kelas = 0;
+                  $jampel_kelas = $jampel * $foundJml;
+                  $jumlah_absen = 0;
+                  while($persen_kelas < sizeof($arrayKey)){
+                    $jumlah_absen = $jumlah_absen + $siswa['jml'][$arrayKey[$persen_kelas]];
+                    $persen_kelas++;
+                  }
+                  $persentase_kelas = number_format(($jumlah_absen/$jampel_kelas)*100,2);
+                  echo $persentase_kelas."<BR>";
                   ?>
                   
                   <!-- start chart -->
@@ -263,22 +335,22 @@
                     </div>
 
                   </div>
-                  <!-- end chart --><?php
+                  <!-- end chart -->
+                  <?php
                   
                   $jml_kelas++;
                 }
 
-                echo $jml_kelas;
+                echo $jml_kelas." kelas <BR>";
                 print_r($chartName); echo "<BR>";
+                print_r($siswa); echo "<BR>";
+                print_r($nama_kelas); echo "<BR>";
+                // print_r(array_keys($siswa['kelas'],"9-1")); echo "<BR>";
+                echo sizeof($siswa);
               
               }
             }?>
                   
-            
-            
-
-          
-
         </div>
         <!-- /.container-fluid -->
 
@@ -323,48 +395,27 @@
 
     var jml_kelas = <?php echo $jml_kelas; ?>;
     var arr_nama_kelas = <?php echo '["'.implode('","',$chartName).'"]'; ?>;
+    var arr_nama_bulan = <?php echo '["'.implode('","',$nama_bulan).'"]'; ?>;
     
     for(i=0;i<jml_kelas;i++){
       makeChart(arr_nama_kelas[i]);
     }
 
-    function number_format(number, decimals, dec_point, thousands_sep) {
-      // *     example: number_format(1234.56, 2, ',', ' ');
-      // *     return: '1 234,56'
-      number = (number + '').replace(',', '').replace(' ', '');
-      var n = !isFinite(+number) ? 0 : +number,
-        prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
-        sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
-        dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
-        s = '',
-        toFixedFix = function(n, prec) {
-          var k = Math.pow(10, prec);
-          return '' + Math.round(n * k) / k;
-        };
-      // Fix for IE parseFloat(0.55).toFixed(0) = 0;
-      s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
-      if (s[0].length > 3) {
-        s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
-      }
-      if ((s[1] || '').length < prec) {
-        s[1] = s[1] || '';
-        s[1] += new Array(prec - s[1].length + 1).join('0');
-      }
-      return s.join(dec);
-    }
-
     function makeChart(chartName){
       var ctx = document.getElementById(chartName);
+      var kelas = chartName.substr(12);
+      var arr_data = "data"+kelas;
       var myBarChart = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ["January", "February", "March", "April", "May", "June"],
+          labels: arr_nama_bulan,
           datasets: [{
-            label: "Revenue",
+            label: "Persentase Kehadiran",
             backgroundColor: "#4e73df",
             hoverBackgroundColor: "#2e59d9",
             borderColor: "#4e73df",
-            data: [4215, 5312, 6251, 7841, 9821, 14984],
+            //TODO: Buat array data untuk per kelas
+            data: [42.15, 53.12, 62.51, 78.41, 98.21, 14.98],
           }],
         },
         options: {
@@ -387,19 +438,19 @@
                 drawBorder: false
               },
               ticks: {
-                maxTicksLimit: 6
+                maxTicksLimit: 12
               },
               maxBarThickness: 25,
             }],
             yAxes: [{
               ticks: {
                 min: 0,
-                max: 15000,
+                max: 100,
                 maxTicksLimit: 5,
                 padding: 10,
                 // Include a dollar sign in the ticks
                 callback: function(value, index, values) {
-                  return '$' + number_format(value);
+                  return value + ' %';
                 }
               },
               gridLines: {
