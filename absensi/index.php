@@ -57,6 +57,11 @@
   $absen_tanggal = [];
 
   $chartName = [];
+  $dataName = [];
+  $array_persentase_kelas = [];
+
+  $bln_absen = "";
+  $bln_absen_b4 = "";
 
   $siswa = array(
       'kelas' => [],
@@ -249,11 +254,11 @@
                   $resKelas = mysqli_query($link,$sqlKelas);
                   $foundJml = mysqli_num_rows($resKelas);
 
-                  echo $nama_kelas[$jml_kelas]." = ".$foundJml."<br>";
+                  // echo $nama_kelas[$jml_kelas]." = ".$foundJml."<br>";
+                  $array_persentase_kelas[$nama_kelas[$jml_kelas]] = [0,0,0,0,0,0,0,0,0,0,0,0];
                   // end query ambil data
                   
                   // start insert data to array
-                  // TODO insert data to array
                   if($found){
                     foreach($res as $data){
                       //TODO
@@ -282,16 +287,113 @@
                         array_push($siswa['persen'], 0);
                       }
 
-                      echo "$data[tanggal_absen] </BR>";
-                      echo "$data[nis] </BR>";
+                      // echo "$data[tanggal_absen] </BR>";
+                      // echo "$data[nis] </BR>";
+                      $bln_absen = substr($data['tanggal_absen'],5,2);
+
+                      // if($bln_absen_b4 == ""){
+                      //   $bln_absen_b4 = $bln_absen;
+                      // }else if($bln_absen_b4 !== $bln_absen){
+                        // insertToArray($nama_kelas[$jml_kelas], $bln_absen, $foundJml);
+                        
+                        // $array_persentase_kelas[$nama_kelas[$jml_kelas]] = [0,0,0,0,0,0,0,0,0,0,0,0];
+                  
+                        // echo "<br>";
+                        $arrayKey = array_keys($siswa['kelas'],$nama_kelas[$jml_kelas]);
+                        // print_r($arrayKey); echo "<BR>";
+                        $persen_kelas = 0;
+                        $jampel_kelas = $jampel * $foundJml;
+                        $jumlah_absen = 0;
+                        while($persen_kelas < sizeof($arrayKey)){
+                          $jumlah_absen = $jumlah_absen + $siswa['jml'][$arrayKey[$persen_kelas]];
+                          $persen_kelas++;
+                        }
+
+                        $persentase_kelas = number_format(($jumlah_absen/$jampel_kelas)*100,2);
+
+                        switch ($bln_absen) {
+                          case '01':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][6] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '02':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][7] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '03':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][8] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '04':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][9] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '05':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][10] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '06':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][11] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                          break;
+
+                          case '07':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][0] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '08':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][1] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '09':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][2] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '10':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][3] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '11':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][4] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          case '12':
+                            $array_persentase_kelas[$nama_kelas[$jml_kelas]][5] = $persentase_kelas;
+                            $persentase_kelas = 0;
+                            break;
+
+                          
+                          default:
+                            // echo "tanggal absen". substr($data['tanggal_absen'],5,2);
+                            break;
+                        }
+                        
+
+                        // $bln_absen_b4 = $bln_absen;
+
+                      // }
+                      // print_r($array_persentase_kelas); echo "<BR>";
                       // echo "$data[nama] </BR>";
                       // echo "$data[hari] </BR>";
                       // echo "$data[jampel] </BR>";
                       // echo "$data[jam_absen] </BR>";
                       // echo "$data[nama_matpel] </BR> </BR>";
+                      // echo $bln_absen."<BR>";
+                      // echo $bln_absen_b4."<BR>";
                     }
-                    echo $nama_kelas[$jml_kelas]." = ".$foundJml."<br>";
-                    // print_r($absen_bulan); echo "<br>";
+                    // echo $nama_kelas[$jml_kelas]." = ".$foundJml."<br>";
+                    // echo $bln_absen;
+
                   }
 
                   // end insert data to array
@@ -299,19 +401,9 @@
                   /* buat persentase */
                   //tambah tingkat kehadiran semua siswa per kelas
                   //bagi banyak siswa per kelas
-                  
-                  echo "<br>";
-                  $arrayKey = array_keys($siswa['kelas'],$nama_kelas[$jml_kelas]);
-                  print_r($arrayKey); echo "<BR>";
-                  $persen_kelas = 0;
-                  $jampel_kelas = $jampel * $foundJml;
-                  $jumlah_absen = 0;
-                  while($persen_kelas < sizeof($arrayKey)){
-                    $jumlah_absen = $jumlah_absen + $siswa['jml'][$arrayKey[$persen_kelas]];
-                    $persen_kelas++;
-                  }
-                  $persentase_kelas = number_format(($jumlah_absen/$jampel_kelas)*100,2);
-                  echo $persentase_kelas."<BR>";
+
+                  // echo $persentase_kelas."<BR>";
+                  // print_r($array_persentase_kelas);
                   ?>
                   
                   <!-- start chart -->
@@ -327,7 +419,10 @@
                         <div class="card-body">
                           <div class="chart-area">
                             <canvas id="chartAbsensi<?php echo $nama_kelas[$jml_kelas]; ?>"></canvas>
-                            <?php array_push($chartName, "chartAbsensi".$nama_kelas[$jml_kelas]); ?>
+                            <?php 
+                              array_push($chartName, "chartAbsensi".$nama_kelas[$jml_kelas]); 
+                              array_push($dataName, "data".$nama_kelas[$jml_kelas]);
+                            ?>
                           </div>
                         </div>
                       </div>
@@ -341,12 +436,13 @@
                   $jml_kelas++;
                 }
 
-                echo $jml_kelas." kelas <BR>";
-                print_r($chartName); echo "<BR>";
-                print_r($siswa); echo "<BR>";
-                print_r($nama_kelas); echo "<BR>";
+                // echo $jml_kelas." kelas <BR>";
+                // echo "chartName "; print_r($chartName); echo "<BR>";
+                // echo "siswa "; print_r($siswa); echo "<BR>";
+                // echo "nama kelas "; print_r($nama_kelas); echo "<BR>";
                 // print_r(array_keys($siswa['kelas'],"9-1")); echo "<BR>";
-                echo sizeof($siswa);
+                // echo sizeof($siswa);
+                // print_r($array_persentase_kelas); echo "<BR>";
               
               }
             }?>
@@ -394,14 +490,20 @@
     Chart.defaults.global.defaultFontColor = '#858796';
 
     var jml_kelas = <?php echo $jml_kelas; ?>;
-    var arr_nama_kelas = <?php echo '["'.implode('","',$chartName).'"]'; ?>;
+    var arr_chart_kelas = <?php echo '["'.implode('","',$chartName).'"]'; ?>;
     var arr_nama_bulan = <?php echo '["'.implode('","',$nama_bulan).'"]'; ?>;
+    var arr_nama_kelas = <?php echo '["'.implode('","',$nama_kelas).'"]'; ?>;
+    // var arr_persentase = <?php //echo '["'.implode('","',$array_persentase_kelas).'"]'; ?>;
+
+    var arr_persentase = <?php echo json_encode($array_persentase_kelas); ?>;
+    // console.log(arr_persentase["8-3"]);
+
     
     for(i=0;i<jml_kelas;i++){
-      makeChart(arr_nama_kelas[i]);
+      makeChart(arr_chart_kelas[i], arr_nama_kelas[i]);
     }
 
-    function makeChart(chartName){
+    function makeChart(chartName, className){
       var ctx = document.getElementById(chartName);
       var kelas = chartName.substr(12);
       var arr_data = "data"+kelas;
@@ -415,7 +517,8 @@
             hoverBackgroundColor: "#2e59d9",
             borderColor: "#4e73df",
             //TODO: Buat array data untuk per kelas
-            data: [42.15, 53.12, 62.51, 78.41, 98.21, 14.98],
+            data: arr_persentase[className],
+            // data: [42.15, 53.12, 62.51, 78.41, 98.21, 14.98],
           }],
         },
         options: {
@@ -445,8 +548,8 @@
             yAxes: [{
               ticks: {
                 min: 0,
-                max: 100,
-                maxTicksLimit: 5,
+                // max: 100,          
+                // maxTicksLimit: 5,  
                 padding: 10,
                 // Include a dollar sign in the ticks
                 callback: function(value, index, values) {
