@@ -99,11 +99,11 @@
                               <td><?php echo "$data[nama_matpel]"; ?></td>
                               <td><?php echo "<a class='btn btn-warning' href='edit_guru.php?id=$data[nuptk]'>Edit</a> "; 
                                    echo "<a class='btn btn-danger' href='hapus_guru.php?id=$data[nuptk]'>Hapus</a> ";
-                                   echo "<a class='btn btn-success open-AddBookDialog' style='color:white' 
-                                    data-toggle='modal' 
-                                    data-target='#qrCodeModal'
-                                    data-kd_guru='$data[kd_guru]'
-                                    data-nama_guru='$data[nama]'>Generate QR</a>"; ?></td>
+                                  //  echo "<a class='btn btn-success open-AddBookDialog' style='color:white' 
+                                  //   data-toggle='modal' 
+                                  //   data-target='#qrCodeModal'
+                                  //   data-kd_guru='$data[kd_guru]'
+                                  //   data-nama_guru='$data[nama]'>Generate QR</a>"; ?></td>
                             </tr>
                           <?php
                         }
