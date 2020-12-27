@@ -136,7 +136,8 @@
                     FROM jadwal
                     INNER JOIN kelas
                       ON jadwal.id_kelas=kelas.id_kelas
-                        WHERE kd_guru = '$kd_guru'";
+                    WHERE kd_guru = '$kd_guru'
+                    ORDER BY kelas.nama_kelas ASC";
               $res=mysqli_query($link,$sql);
               $ketemu=mysqli_num_rows($res);
               if($ketemu){
@@ -158,57 +159,198 @@
                         INNER JOIN kelas
                           ON absen.id_kelas=kelas.id_kelas
                         WHERE absen.kd_guru = '$kd_guru' && kelas.nama_kelas = '$nama_kelas[$jml_kelas]'
-                        ORDER BY siswa.nama ASC";
+                        -- ORDER BY siswa.nama ASC
+                        ORDER BY absen.tanggal_absen ASC, hari.hari DESC, jam_pelajaran.jampel ASC, siswa.nama ASC";
                     $res=mysqli_query($link,$sql);
                     $found=mysqli_num_rows($res);
-                  ?>
-                  <!-- end query ambil data -->
-                  
-                  <!-- tabel absensi -->
-                  <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                      <h6 class="m-0 font-weight-bold text-primary">Data Absensi Kelas <?php echo $nama_kelas[$jml_kelas]; ?></h6>
-                    </div>
-                    <div class="card-body">
-                      <div class="table-responsive">
-                        <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                          <thead>
-                            <tr>
-                              <th>Tanggal</th>
-                              <th>NIS</th>
-                              <th>Nama</th>
-                              <th>Hari</th>
-                              <th>Jam Pelajaran</th>
-                              <th>Jam Absen</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <?php 
-                              if($found){
-                                foreach($res as $data){
-                                  ?>
-                                    <tr>
-                                      <td><?php echo "$data[tanggal_absen]"; ?></td>
-                                      <td><?php echo "$data[nis]"; ?></td>
-                                      <td><?php echo "$data[nama]"; ?></td>
-                                      <td><?php echo "$data[hari]"; ?></td>
-                                      <td><?php echo "$data[jampel]"; ?></td>
-                                      <td><?php echo "$data[jam_absen]"; ?></td>
-                                  <?php
-                                }
-                              }else{?>
-                                <tr><td colspan="7"><center>Tidak ada data.</td><center></tr><?php
-                              }
-                            ?>
-                          </tbody>
-                        </table>
+
+                    $sqlKelas = "SELECT * FROM siswa 
+                              INNER JOIN kelas 
+                                ON siswa.id_kelas=kelas.id_kelas 
+                              WHERE kelas.nama_kelas='$nama_kelas[$jml_kelas]'";
+                    $resKelas = mysqli_query($link,$sqlKelas);
+                    $foundJml = mysqli_num_rows($resKelas);
+
+                    // echo $nama_kelas[$jml_kelas]." = ".$foundJml."<br>";
+                    $array_persentase_kelas[$nama_kelas[$jml_kelas]] = [0,0,0,0,0,0,0,0,0,0,0,0];
+                    // end query ambil data
+                    
+                    // start insert data to array
+                    if($found){
+                      foreach($res as $data){
+                        //add per nis
+                        //itung udh brp banyak jampel yg nis itu absen
+                        //dapet tingkat kehadiran per siswa
+
+                        //cek nis udh ada atau belom
+                        if(in_array_r($data['nis'],$siswa['nis'],false)){
+                          $id = array_search($data['nis'], $siswa['nis']);
+
+                          $jampel_siswa = $siswa['jml'][$id];
+                          $jampel_siswa++;
+                          $siswa['jml'][$id] = $jampel_siswa;
+                          // echo $jampel_siswa."<br>";
+
+                          $persen = $siswa['persen'][$id];
+                          $persen = number_format(($jampel_siswa/$jampel)*100,2);
+                          $siswa['persen'][$id] = $persen;
+                          
+                        }else{
+                          array_push($siswa['kelas'], $nama_kelas[$jml_kelas]);
+                          array_push($siswa['nis'], $data['nis']);
+                          array_push($siswa['jml'], 1);
+                          array_push($siswa['persen'], 0);
+                        }
+
+                        // echo "$data[tanggal_absen] </BR>";
+                        // echo "$data[nis] </BR>";
+                        $bln_absen = substr($data['tanggal_absen'],5,2);
+                    
+                          // echo "<br>";
+                          $arrayKey = array_keys($siswa['kelas'],$nama_kelas[$jml_kelas]);
+                          print_r($arrayKey); echo "<BR>";
+                          $persen_kelas = 0;
+                          $jampel_kelas = $jampel * $foundJml;
+                          $jumlah_absen = 0;
+                          while($persen_kelas < sizeof($arrayKey)){
+                            // echo "while persen kelas < sizeof array key<br>";
+                            $jumlah_absen = $jumlah_absen + $siswa['jml'][$arrayKey[$persen_kelas]];
+                            $persen_kelas++;
+                          }
+
+                          $persentase_kelas = number_format(($jumlah_absen/$jampel_kelas)*100,2);
+
+                          switch ($bln_absen) {
+                            case '01':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][6] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '02':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][7] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '03':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][8] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '04':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][9] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '05':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][10] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '06':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][11] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                            break;
+
+                            case '07':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][0] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '08':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][1] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '09':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][2] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '10':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][3] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '11':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][4] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            case '12':
+                              $array_persentase_kelas[$nama_kelas[$jml_kelas]][5] = $persentase_kelas;
+                              $persentase_kelas = 0;
+                              break;
+
+                            
+                            default:
+                              // echo "tanggal absen". substr($data['tanggal_absen'],5,2);
+                              break;
+                          }
+                          
+
+                          // $bln_absen_b4 = $bln_absen;
+
+                        // }
+                        // print_r($array_persentase_kelas); echo "<BR>";
+                        // echo "$data[nama] </BR>";
+                        // echo "$data[hari] </BR>";
+                        // echo "$data[jampel] </BR>";
+                        // echo "$data[jam_absen] </BR>";
+                        // echo "$data[nama_matpel] </BR> </BR>";
+                        // echo $bln_absen."<BR>";
+                        // echo $bln_absen_b4."<BR>";
+                      }
+                      // echo $nama_kelas[$jml_kelas]." = ".$foundJml."<br>";
+                      // echo $bln_absen;
+
+                    }
+
+                    // end insert data to array
+
+                    /* buat persentase */
+                    //tambah tingkat kehadiran semua siswa per kelas
+                    //bagi banyak siswa per kelas
+
+                    // echo $persentase_kelas."<BR>";
+                    // print_r($array_persentase_kelas);
+                    ?>
+                    
+                    <!-- start chart -->
+                    <div class="row">
+
+                      <div class="col-xl-8 col-lg-7">
+
+                        <!-- Area Chart -->
+                        <div class="card shadow mb-4">
+                          <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Chart Absensi <?php echo $nama_kelas[$jml_kelas]; ?></h6>
+                          </div>
+                          <div class="card-body">
+                            <div class="chart-area">
+                              <canvas id="chartAbsensi<?php echo $nama_kelas[$jml_kelas]; ?>"></canvas>
+                              <?php 
+                                array_push($chartName, "chartAbsensi".$nama_kelas[$jml_kelas]); 
+                                array_push($dataName, "data".$nama_kelas[$jml_kelas]);
+                              ?>
+                            </div>
+                          </div>
+                        </div>
+
                       </div>
+
                     </div>
-                  </div>
-                  <!-- end tabel absensi -->
+                    <!-- end chart -->
                   <?php
                   $jml_kelas++;
                 }
+
+                // echo $jml_kelas." kelas <BR>";
+                // echo "chartName "; print_r($chartName); echo "<BR>";
+                // echo "siswa "; print_r($siswa); echo "<BR>";
+                // echo "nama kelas "; print_r($nama_kelas); echo "<BR>";
+                // print_r(array_keys($siswa['kelas'],"9-1")); echo "<BR>";
+                // echo sizeof($siswa);
+                // print_r($array_persentase_kelas); echo "<BR>";
               
               }
             }else{
@@ -216,7 +358,8 @@
               $sql="SELECT DISTINCT jadwal.id_kelas,kelas.nama_kelas 
                     FROM jadwal
                     INNER JOIN kelas
-                      ON jadwal.id_kelas=kelas.id_kelas";
+                      ON jadwal.id_kelas=kelas.id_kelas
+                    ORDER BY kelas.nama_kelas ASC";
               $res=mysqli_query($link,$sql);
               $ketemu=mysqli_num_rows($res);
               if($ketemu){
