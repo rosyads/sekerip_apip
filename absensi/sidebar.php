@@ -6,7 +6,24 @@
       <div class="sidebar-brand-icon rotate-n-15">
         <i class="fas fa-laugh-wink"></i>
       </div>
-      <div class="sidebar-brand-text mx-3">My Ganesa</div>
+      <?php 
+        $sql = "SELECT * FROM guru WHERE nuptk = '$_SESSION[username]'";
+        $res = mysqli_query($link,$sql);
+        $ketemu = mysqli_num_rows($res);
+    
+        if($ketemu){
+          $acc = mysqli_fetch_assoc($res);
+          $kd_guru = $acc["kd_guru"];
+        }
+      ?>
+
+      <?php 
+        if(isset($kd_guru)){
+          echo "<div class='sidebar-brand-text mx-3'>Guru</div>"; 
+        }else{
+          echo "<div class='sidebar-brand-text mx-3'>Absensi</div>"; 
+        }
+      ?>
     </a>
 
     <!-- Divider -->
