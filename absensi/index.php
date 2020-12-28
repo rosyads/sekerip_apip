@@ -636,7 +636,6 @@
     var arr_chart_kelas = <?php echo '["'.implode('","',$chartName).'"]'; ?>;
     var arr_nama_bulan = <?php echo '["'.implode('","',$nama_bulan).'"]'; ?>;
     var arr_nama_kelas = <?php echo '["'.implode('","',$nama_kelas).'"]'; ?>;
-    // var arr_persentase = <?php //echo '["'.implode('","',$array_persentase_kelas).'"]'; ?>;
 
     var arr_persentase = <?php echo json_encode($array_persentase_kelas); ?>;
     // console.log(arr_persentase["8-3"]);

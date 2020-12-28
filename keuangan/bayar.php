@@ -1,4 +1,7 @@
-<?php include 'header.php'; ?>
+<?php 
+  include 'header.php'; 
+  $nama_kelas = [];
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -44,52 +47,67 @@
 
           <!-- query ambil data -->
           <?php 
-            $sql="SELECT bayar.tahun_ajar, bayar.semester, bayar.bulan,
-                    siswa.nis, siswa.nama, bayar.nominal, bayar.tanggal_bayar 
-                FROM bayar INNER JOIN siswa 
-                  ON bayar.nis=siswa.nis";
-            $res=mysqli_query($link,$sql);
-            $ketemu=mysqli_num_rows($res);
+            $sql = "SELECT * FROM kelas
+                    ORDER BY nama_kelas ASC";
+            $res = mysqli_query($link,$sql);
+            $ketemu = mysqli_num_rows($res);
+            
+            if($ketemu){
+              $jml_kelas = 0;
+              foreach($res as $data){
+                array_push($nama_kelas, $data["nama_kelas"]);
+              }
+              while($jml_kelas < $ketemu){
+                $sql="SELECT bayar.*,siswa.nama 
+                    FROM bayar
+                    INNER JOIN siswa
+                      ON bayar.nis = siswa.nis
+                    INNER JOIN kelas
+                      ON siswa.id_kelas = kelas.id_kelas
+                    WHERE kelas.nama_kelas = '$nama_kelas[$jml_kelas]'
+                    ORDER BY nama ASC, tanggal_bayar ASC, bulan ASC";
+                $res=mysqli_query($link,$sql);
+                $found=mysqli_num_rows($res);
+            
           ?>
           <!-- end query ambil data -->
 
-          <!-- tabel guru -->
+          <!-- tabel saldo -->
           <div class="card shadow mb-4">
             <div class="card-header py-3">
-              <h6 class="m-0 font-weight-bold text-primary">Data Pembayaran SPP</h6>
+              <h6 class="m-0 font-weight-bold text-primary">Data Pembayaran SPP Kelas <?php echo $nama_kelas[$jml_kelas]; ?></h6>
             </div>
             <div class="card-body">
               <div class="table-responsive">
-                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <table class="table table-bordered" id="dataTable<?php echo $nama_kelas[$jml_kelas]; ?>" width="100%" cellspacing="0">
                   <thead>
                     <tr>
-                      <th>Tahun Ajar</th>
-                      <th>Semester</th>
-                      <th>Bulan</th>
                       <th>NIS</th>
                       <th>Nama</th>
-                      <th>Nominal</th>
+                      <th>Semester</th>
+                      <th>Tahun Ajar</th>
+                      <th>Bulan</th>
                       <th>Tanggal Bayar</th>
+                      <th>Nominal</th>
                     </tr>
                   </thead>
                   <tbody>
                     <?php 
-                      if($ketemu){
+                      if($found){
                         foreach($res as $data){
                           ?>
                             <tr>
-                              <td><?php echo "$data[tahun_ajar]"; ?></td>
-                              <td><?php echo "$data[semester]"; ?></td>
-                              <td><?php echo "$data[bulan]"; ?></td>
                               <td><?php echo "$data[nis]"; ?></td>
                               <td><?php echo "$data[nama]"; ?></td>
-                              <td><?php echo "$data[nominal]"; ?></td>
+                              <td><?php echo "$data[semester]"; ?></td>
+                              <td><?php echo "$data[tahun_ajar]"; ?></td>
+                              <td><?php echo "$data[bulan]"; ?></td>
                               <td><?php echo "$data[tanggal_bayar]"; ?></td>
-                            </tr>
+                              <td><?php echo "$data[nominal]"; ?></td>
                           <?php
                         }
                       }else{?>
-                        <tr><td colspan="5"><center>Tidak ada data.</td><center></tr><?php
+                        <tr><td colspan="7"><center>Tidak ada data.</td><center></tr><?php
                       }
                     ?>
                   </tbody>
@@ -97,7 +115,12 @@
               </div>
             </div>
           </div>
-          <!-- end tabel guru -->
+          <!-- end tabel saldo -->
+          <?php 
+                $jml_kelas++;
+              }
+            }
+          ?>
 
         </div>
         <!-- /.container-fluid -->
