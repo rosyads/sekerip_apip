@@ -2,13 +2,13 @@
     //Import File Koneksi Database
     require_once('../connect.php');
     
-	$nis = $_POST['nis'];
+	$username = $_POST['username'];
 	// $nis = '181907002';
 
 	//Membuat SQL Query
-	$sql = "SELECT bulan, tanggal_bayar, nominal
-            FROM bayar
-            WHERE nis = '$nis'";
+	$sql = "SELECT nis, bulan, tanggal_bayar, nominal
+            FROM bayar 
+            ORDER BY tanggal_bayar DESC";     
 
 	//Mendapatkan Hasil
 	$r = mysqli_query($link,$sql);
@@ -20,6 +20,7 @@
 
 		//Memasukkan Nama dan ID kedalam Array Kosong yang telah dibuat
 		array_push($result,array(
+            "nis"=>$row['nis'],
             "bulan"=>$row['bulan'],
             "tanggal_bayar"=>$row['tanggal_bayar'],
             "nominal"=>$row['nominal']
