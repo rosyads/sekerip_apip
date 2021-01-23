@@ -3,9 +3,9 @@
     require_once('../connect.php');
     
     $kd_guru = $_POST['kd_guru'];
-    // $hari = $_POST['hari'];
+    $hari = $_POST['hari'];
     // $kd_guru = '002';
-    $hari = 'Senin';
+    // $hari = 'Senin';
 
 	//Membuat SQL Query
 	$sql = "SELECT DISTINCT jadwal.id_kelas,kelas.nama_kelas, jam_pelajaran.jampel
