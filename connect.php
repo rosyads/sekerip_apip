@@ -12,4 +12,3 @@ $link = new mysqli($host, $username, $password, $database);
 if ($link->connect_error) {
     die("Database connection failed: " . $link->connect_error);
 }
-?>

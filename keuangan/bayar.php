@@ -72,7 +72,7 @@
           ?>
           <!-- end query ambil data -->
 
-          <!-- tabel saldo -->
+          <!-- tabel pembayaran -->
           <div class="card shadow mb-4">
             <div class="card-header py-3">
               <h6 class="m-0 font-weight-bold text-primary">Data Pembayaran SPP Kelas <?php echo $nama_kelas[$jml_kelas]; ?></h6>
@@ -115,7 +115,7 @@
               </div>
             </div>
           </div>
-          <!-- end tabel saldo -->
+          <!-- end tabel pembayaran -->
           <?php 
                 $jml_kelas++;
               }

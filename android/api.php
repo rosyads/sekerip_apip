@@ -320,4 +320,3 @@
     return true; 
 }
 echo json_encode($response);
-?>

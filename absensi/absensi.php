@@ -58,6 +58,7 @@
 
           <?php
             if(isset($kd_guru)){
+              //Akun Guru
               $sql="SELECT DISTINCT jadwal.id_kelas,kelas.nama_kelas 
                     FROM jadwal
                     INNER JOIN kelas
@@ -138,6 +139,7 @@
               
               }
             }else{
+              //Akun Absensi
               $sql="SELECT DISTINCT jadwal.id_kelas,kelas.nama_kelas 
                     FROM jadwal
                     INNER JOIN kelas
@@ -224,10 +226,6 @@
               
               }
             }?>
-            
-            
-
-          
 
         </div>
         <!-- /.container-fluid -->

@@ -41,5 +41,3 @@ if($num == 1){
 	echo "</script>";
 
 }
-
-?>
