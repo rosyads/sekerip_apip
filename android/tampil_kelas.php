@@ -4,14 +4,17 @@
     
     $kd_guru = $_POST['kd_guru'];
     $id_kelas = $_POST['id_kelas'];
+	$tanggal = $_POST['tanggal'];
     // $id_kelas = '4';
 
 	//Membuat SQL Query
 	$sql = "SELECT DISTINCT siswa.nis, siswa.nama
             FROM siswa
             INNER JOIN kelas
-            ON siswa.id_kelas=kelas.id_kelas
-            WHERE siswa.id_kelas = '$id_kelas'
+            	ON siswa.id_kelas=kelas.id_kelas
+			INNER JOIN absen
+            	ON siswa.nis=absen.nis
+            WHERE siswa.id_kelas = '$id_kelas' && absen.tanggal_absen = '$tanggal'
             ORDER BY siswa.nis ASC";
 
 	//Mendapatkan Hasil

@@ -208,7 +208,7 @@
                     
                           // echo "<br>";
                           $arrayKey = array_keys($siswa['kelas'],$nama_kelas[$jml_kelas]);
-                          print_r($arrayKey); echo "<BR>";
+                          // print_r($arrayKey); echo "<BR>";
                           $persen_kelas = 0;
                           $jampel_kelas = $jampel * $foundJml;
                           $jumlah_absen = 0;

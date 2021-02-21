@@ -17,7 +17,7 @@
             INNER JOIN jam_pelajaran
             ON jadwal.id_jampel=jam_pelajaran.id_jampel
             WHERE kd_guru = '$kd_guru' && hari='$hari'
-            ORDER BY kelas.nama_kelas ASC";
+            ORDER BY jam_pelajaran.jampel ASC";
 
 	//Mendapatkan Hasil
 	$r = mysqli_query($link,$sql);

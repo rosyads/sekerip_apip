@@ -14,7 +14,7 @@ $array_hasil_absen = [];
 
 $array_hasil = [];
 
-$setMinus = 300000;
+$setMinus = 600000;
 
 $hasil_akhir_mtk = false;
 $hasil_akhir_pjok = false;
@@ -27,9 +27,20 @@ $hasil_akhir_senbud = false;
 $hasil_akhir_ips = false;
 $hasil_akhir_pkn = false;
 
-$hasil_bayar = false;
+$hasil_bayar = "00";
+$kesimpulan_bayar = "Ada tunggakan";
 
-function kualifikasiBayar($awalBulan, $akhirBulan)
+function in_array_r($needle, $haystack, $strict = false) {
+    foreach ($haystack as $item) {
+        if (($strict ? $item === $needle : $item == $needle) || (is_array($item) && in_array_r($needle, $item, $strict))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function kualifikasiBayar($awalBulan, $akhirBulan, $kelas)
 {
     for ($x = $awalBulan; $x <= $akhirBulan; $x++) {
         global $tahun;
@@ -38,8 +49,15 @@ function kualifikasiBayar($awalBulan, $akhirBulan)
         global $array_kualifikasi_bayar;
         global $array_hasil_bayar;
 
+        global $setMinus;
+
         $bulanTahun = $tahun . "-" . str_pad($x, 2, "0", STR_PAD_LEFT);
-        $sql = "SELECT * FROM bayar WHERE SUBSTRING(tanggal_bayar,1,7) = '$bulanTahun'";
+        $sql = "SELECT bayar.* FROM bayar
+                INNER JOIN siswa
+                    ON bayar.nis=siswa.nis 
+                INNER JOIN kelas
+                    ON siswa.id_kelas=kelas.id_kelas 
+                WHERE SUBSTRING(tanggal_bayar,1,7) = '$bulanTahun' && kelas.nama_kelas = '$kelas'";
         $res = mysqli_query($link, $sql);
         $ketemu = mysqli_num_rows($res);
 
@@ -48,13 +66,17 @@ function kualifikasiBayar($awalBulan, $akhirBulan)
                 if (empty($array_kualifikasi_bayar)) {
                     array_push($array_kualifikasi_bayar, array("nis" => $data['nis'], "nominal" => $data['nominal']));
                 } else {
-                    $i = 0;
-                    while ($i < sizeof($array_kualifikasi_bayar)) {
-                        if ($array_kualifikasi_bayar[$i]["nis"] == $data['nis']) {
-                            $array_kualifikasi_bayar[$i]["nominal"] = $array_kualifikasi_bayar[$i]["nominal"] + $data['nominal'];
-                        }
+                    if(in_array_r($data['nis'],$array_kualifikasi_bayar)){
+                        $i = 0;
+                        while ($i < sizeof($array_kualifikasi_bayar)) {
+                            if ($array_kualifikasi_bayar[$i]["nis"] == $data['nis']) {
+                                $array_kualifikasi_bayar[$i]["nominal"] = $array_kualifikasi_bayar[$i]["nominal"] + $data['nominal'];
+                            }
 
-                        $i++;
+                            $i++;
+                        }
+                    }else{
+                        array_push($array_kualifikasi_bayar, array("nis" => $data['nis'], "nominal" => $data['nominal']));
                     }
                 }
             }
@@ -63,10 +85,13 @@ function kualifikasiBayar($awalBulan, $akhirBulan)
 
     $j = 0;
     while ($j < sizeof($array_kualifikasi_bayar)) {
-        if ($array_kualifikasi_bayar[$j]["nominal"] < 300000) {
-            $minus = 300000 - $array_kualifikasi_bayar[$j]["nominal"];
+        if (($setMinus - $array_kualifikasi_bayar[$j]["nominal"]) > 300000) {
+            $minus = $setMinus - $array_kualifikasi_bayar[$j]["nominal"];
             array_push($array_hasil_bayar, array("nis" => $array_kualifikasi_bayar[$j]["nis"], "kurang" => $minus, "hasil" => "Ada tunggakan"));
-        } else {
+        } else if (($setMinus - $array_kualifikasi_bayar[$j]["nominal"]) <= 300000 && ($setMinus - $array_kualifikasi_bayar[$j]["nominal"]) > 0) {
+            $minus = $setMinus - $array_kualifikasi_bayar[$j]["nominal"];
+            array_push($array_hasil_bayar, array("nis" => $array_kualifikasi_bayar[$j]["nis"], "kurang" => $minus, "hasil" => "Ada tunggakan, tapi boleh ikut ujian"));
+        }else if (($setMinus - $array_kualifikasi_bayar[$j]["nominal"]) <= 0){
             array_push($array_hasil_bayar, array("nis" => $array_kualifikasi_bayar[$j]["nis"], "kurang" => 0, "hasil" => "Tidak ada tunggakan"));
         }
 
@@ -74,7 +99,7 @@ function kualifikasiBayar($awalBulan, $akhirBulan)
     }
 }
 
-function kualifikasiAbsen($awalBulan, $akhirBulan)
+function kualifikasiAbsen($awalBulan, $akhirBulan, $kelas)
 {
     for ($x = $awalBulan; $x <= $akhirBulan; $x++) {
         global $tahun;
@@ -93,7 +118,7 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                     ON absen.kd_guru=guru.kd_guru 
                 INNER JOIN mata_pelajaran 
                     ON guru.id_matpel=mata_pelajaran.id_matpel 
-                WHERE SUBSTRING(tanggal_absen,1,7) = '$bulanTahun'";
+                WHERE SUBSTRING(tanggal_absen,1,7) = '$bulanTahun' && kelas.nama_kelas = '$kelas'";
         $res = mysqli_query($link, $sql);
         $ketemu = mysqli_num_rows($res);
 
@@ -297,164 +322,366 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                         }
                     }
                 } else {
-                    $i = 0;
-                    while ($i < sizeof($array_kualifikasi_absen)) {
-                        if ($array_kualifikasi_absen[$i]["nis"] == $data['nis']) {
-                            //Cek kelas angkatan
-                            if (substr($data["nama_kelas"], 0, 1) == "8") {
-                                //Untuk kelas 8
+                    if(in_array_r($data['nis'],$array_kualifikasi_absen)){
+                        $i = 0;
+                        while ($i < sizeof($array_kualifikasi_absen)) {
+                            if ($array_kualifikasi_absen[$i]["nis"] == $data['nis']) {
+                                //Cek kelas angkatan
+                                if (substr($data["nama_kelas"], 0, 1) == "8") {
+                                    //Untuk kelas 8
 
-                                //Set data
+                                    //Set data
+                                    switch ($data["nama_matpel"]) {
+                                        case 'Matematika':
+                                            # code...
+                                            $array_kualifikasi_absen[$i]["matematika"]++;
+                                            break;
+                                        case 'PJOK':
+                                            # code...
+                                            $array_kualifikasi_absen[$i]["pjok"]++;
+                                            break;
+                                        case 'Bahasa Indonesia':
+                                            # code...
+                                            $array_kualifikasi_absen[$i]["bahasa"]++;
+                                            break;
+                                        case 'Bahasa Inggris':
+                                            # code...
+                                            $array_kualifikasi_absen[$i]["english"]++;
+                                            break;
+                                        case 'Bahasa Sunda':
+                                            # code...
+                                            $array_kualifikasi_absen[$i]["sunda"]++;
+                                            break;
+                                        case 'Seni Budaya':
+                                            # code...
+                                            $array_kualifikasi_absen[$i]["senbud"]++;
+                                            break;
+                                        case 'IPA':
+                                            # code...
+                                            $array_kualifikasi_absen[$i]["ipa"]++;
+                                            break;
+                                        case 'PPKn':
+                                            # code...
+                                            $array_kualifikasi_absen[$i]["pkn"]++;
+                                            break;
+                                        case 'IPS':
+                                            # code...
+                                            $array_kualifikasi_absen[$i]["ips"]++;
+                                            break;
+
+                                        default:
+                                            # code...
+                                            break;
+                                    }
+                                } else if (substr($data["nama_kelas"], 0, 1) == "9") {
+                                    //untuk kelas 9
+
+                                    //Cek agama
+                                    if ($data['Agama'] == "ISLAM") {
+                                        //Set data
+                                        switch ($data["nama_matpel"]) {
+                                            case 'Matematika':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["matematika"]++;
+                                                break;
+                                            case 'PJOK':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["pjok"]++;
+                                                break;
+                                            case 'Bahasa Indonesia':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["bahasa"]++;
+                                                break;
+                                            case 'Bahasa Inggris':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["english"]++;
+                                                break;
+                                            case 'Bahasa Sunda':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["sunda"]++;
+                                                break;
+                                            case 'Seni Budaya':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["senbud"]++;
+                                                break;
+                                            case 'Pendidikan Agama Islam':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["islam"]++;
+                                                break;
+                                            case 'IPA':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["ipa"]++;
+                                                break;
+                                            case 'PPKn':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["pkn"]++;
+                                                break;
+                                            case 'IPS':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["ips"]++;
+                                                break;
+
+                                            default:
+                                                # code...
+                                                break;
+                                        }
+                                    } else if ($data['Agama'] == "PROTESTAN") {
+                                        //Set data
+                                        switch ($data["nama_matpel"]) {
+                                            case 'Matematika':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["matematika"]++;
+                                                break;
+                                            case 'PJOK':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["pjok"]++;
+                                                break;
+                                            case 'Bahasa Indonesia':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["bahasa"]++;
+                                                break;
+                                            case 'Bahasa Inggris':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["english"]++;
+                                                break;
+                                            case 'Bahasa Sunda':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["sunda"]++;
+                                                break;
+                                            case 'Seni Budaya':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["senbud"]++;
+                                                break;
+                                            case 'Pendidikan Agama Kristen':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["kristen"]++;
+                                                break;
+                                            case 'IPA':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["ipa"]++;
+                                                break;
+                                            case 'PPKn':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["pkn"]++;
+                                                break;
+                                            case 'IPS':
+                                                # code...
+                                                $array_kualifikasi_absen[$i]["ips"]++;
+                                                break;
+
+                                            default:
+                                                # code...
+                                                break;
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+
+                            $i++;
+                        }
+                    }else{
+                        //Cek kelas angkatan
+                        if (substr($data["nama_kelas"], 0, 1) == "8") {
+                            //Untuk kelas 8
+    
+                            //inisialisasi data array
+                            array_push($array_kualifikasi_absen, array(
+                                "nis" => $data['nis'],
+                                "kelas" => "8",
+                                "matematika" => 0,
+                                "pjok" => 0,
+                                "bahasa" => 0,
+                                "english" => 0,
+                                "sunda" => 0,
+                                "senbud" => 0,
+                                "ipa" => 0,
+                                "pkn" => 0,
+                                "ips" => 0,
+                            ));
+    
+                            //Set data pertama
+                            switch ($data["nama_matpel"]) {
+                                case 'Matematika':
+                                    # code...
+                                    $array_kualifikasi_absen[0]["matematika"]++;
+                                    break;
+                                case 'PJOK':
+                                    # code...
+                                    $array_kualifikasi_absen[0]["pjok"]++;
+                                    break;
+                                case 'Bahasa Indonesia':
+                                    # code...
+                                    $array_kualifikasi_absen[0]["bahasa"]++;
+                                    break;
+                                case 'Bahasa Inggris':
+                                    # code...
+                                    $array_kualifikasi_absen[0]["english"]++;
+                                    break;
+                                case 'Bahasa Sunda':
+                                    # code...
+                                    $array_kualifikasi_absen[0]["sunda"]++;
+                                    break;
+                                case 'Seni Budaya':
+                                    # code...
+                                    $array_kualifikasi_absen[0]["senbud"]++;
+                                    break;
+                                case 'IPA':
+                                    # code...
+                                    $array_kualifikasi_absen[0]["ipa"]++;
+                                    break;
+                                case 'PPKn':
+                                    # code...
+                                    $array_kualifikasi_absen[0]["pkn"]++;
+                                    break;
+                                case 'IPS':
+                                    # code...
+                                    $array_kualifikasi_absen[0]["ips"]++;
+                                    break;
+    
+                                default:
+                                    # code...
+                                    break;
+                            }
+                        } else if (substr($data["nama_kelas"], 0, 1) == "9") {
+                            //untuk kelas 9
+    
+                            //Cek agama
+                            if ($data['Agama'] == "ISLAM") {
+                                //inisialisasi data array
+                                array_push($array_kualifikasi_absen, array(
+                                    "nis" => $data['nis'],
+                                    "kelas" => "9",
+                                    "matematika" => 0,
+                                    "pjok" => 0,
+                                    "bahasa" => 0,
+                                    "english" => 0,
+                                    "sunda" => 0,
+                                    "senbud" => 0,
+                                    "islam" => 0,
+                                    "ipa" => 0,
+                                    "pkn" => 0,
+                                    "ips" => 0,
+                                ));
+    
+                                //Set data pertama
                                 switch ($data["nama_matpel"]) {
                                     case 'Matematika':
                                         # code...
-                                        $array_kualifikasi_absen[$i]["matematika"]++;
+                                        $array_kualifikasi_absen[0]["matematika"]++;
                                         break;
                                     case 'PJOK':
                                         # code...
-                                        $array_kualifikasi_absen[$i]["pjok"]++;
+                                        $array_kualifikasi_absen[0]["pjok"]++;
                                         break;
                                     case 'Bahasa Indonesia':
                                         # code...
-                                        $array_kualifikasi_absen[$i]["bahasa"]++;
+                                        $array_kualifikasi_absen[0]["bahasa"]++;
                                         break;
                                     case 'Bahasa Inggris':
                                         # code...
-                                        $array_kualifikasi_absen[$i]["english"]++;
+                                        $array_kualifikasi_absen[0]["english"]++;
                                         break;
                                     case 'Bahasa Sunda':
                                         # code...
-                                        $array_kualifikasi_absen[$i]["sunda"]++;
+                                        $array_kualifikasi_absen[0]["sunda"]++;
                                         break;
                                     case 'Seni Budaya':
                                         # code...
-                                        $array_kualifikasi_absen[$i]["senbud"]++;
+                                        $array_kualifikasi_absen[0]["senbud"]++;
+                                        break;
+                                    case 'Pendidikan Agama Islam':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["islam"]++;
                                         break;
                                     case 'IPA':
                                         # code...
-                                        $array_kualifikasi_absen[$i]["ipa"]++;
+                                        $array_kualifikasi_absen[0]["ipa"]++;
                                         break;
                                     case 'PPKn':
                                         # code...
-                                        $array_kualifikasi_absen[$i]["pkn"]++;
+                                        $array_kualifikasi_absen[0]["pkn"]++;
                                         break;
                                     case 'IPS':
                                         # code...
-                                        $array_kualifikasi_absen[$i]["ips"]++;
+                                        $array_kualifikasi_absen[0]["ips"]++;
                                         break;
-
+    
                                     default:
                                         # code...
                                         break;
                                 }
-                            } else if (substr($data["nama_kelas"], 0, 1) == "9") {
-                                //untuk kelas 9
-
-                                //Cek agama
-                                if ($data['Agama'] == "ISLAM") {
-                                    //Set data
-                                    switch ($data["nama_matpel"]) {
-                                        case 'Matematika':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["matematika"]++;
-                                            break;
-                                        case 'PJOK':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["pjok"]++;
-                                            break;
-                                        case 'Bahasa Indonesia':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["bahasa"]++;
-                                            break;
-                                        case 'Bahasa Inggris':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["english"]++;
-                                            break;
-                                        case 'Bahasa Sunda':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["sunda"]++;
-                                            break;
-                                        case 'Seni Budaya':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["senbud"]++;
-                                            break;
-                                        case 'Pendidikan Agama Islam':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["islam"]++;
-                                            break;
-                                        case 'IPA':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["ipa"]++;
-                                            break;
-                                        case 'PPKn':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["pkn"]++;
-                                            break;
-                                        case 'IPS':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["ips"]++;
-                                            break;
-
-                                        default:
-                                            # code...
-                                            break;
-                                    }
-                                } else if ($data['Agama'] == "PROTESTAN") {
-                                    //Set data
-                                    switch ($data["nama_matpel"]) {
-                                        case 'Matematika':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["matematika"]++;
-                                            break;
-                                        case 'PJOK':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["pjok"]++;
-                                            break;
-                                        case 'Bahasa Indonesia':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["bahasa"]++;
-                                            break;
-                                        case 'Bahasa Inggris':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["english"]++;
-                                            break;
-                                        case 'Bahasa Sunda':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["sunda"]++;
-                                            break;
-                                        case 'Seni Budaya':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["senbud"]++;
-                                            break;
-                                        case 'Pendidikan Agama Kristen':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["kristen"]++;
-                                            break;
-                                        case 'IPA':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["ipa"]++;
-                                            break;
-                                        case 'PPKn':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["pkn"]++;
-                                            break;
-                                        case 'IPS':
-                                            # code...
-                                            $array_kualifikasi_absen[$i]["ips"]++;
-                                            break;
-
-                                        default:
-                                            # code...
-                                            break;
-                                    }
+                            } else if ($data['Agama'] == "PROTESTAN") {
+                                //inisialisasi data array
+                                array_push($array_kualifikasi_absen, array(
+                                    "nis" => $data['nis'],
+                                    "kelas" => "9",
+                                    "matematika" => 0,
+                                    "pjok" => 0,
+                                    "bahasa" => 0,
+                                    "english" => 0,
+                                    "sunda" => 0,
+                                    "senbud" => 0,
+                                    "kristen" => 0,
+                                    "ipa" => 0,
+                                    "pkn" => 0,
+                                    "ips" => 0,
+                                ));
+    
+                                //Set data pertama
+                                switch ($data["nama_matpel"]) {
+                                    case 'Matematika':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["matematika"]++;
+                                        break;
+                                    case 'PJOK':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["pjok"]++;
+                                        break;
+                                    case 'Bahasa Indonesia':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["bahasa"]++;
+                                        break;
+                                    case 'Bahasa Inggris':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["english"]++;
+                                        break;
+                                    case 'Bahasa Sunda':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["sunda"]++;
+                                        break;
+                                    case 'Seni Budaya':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["senbud"]++;
+                                        break;
+                                    case 'Pendidikan Agama Kristen':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["kristen"]++;
+                                        break;
+                                    case 'IPA':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["ipa"]++;
+                                        break;
+                                    case 'PPKn':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["pkn"]++;
+                                        break;
+                                    case 'IPS':
+                                        # code...
+                                        $array_kualifikasi_absen[0]["ips"]++;
+                                        break;
+    
+                                    default:
+                                        # code...
+                                        break;
                                 }
                             }
                         }
-
-                        $i++;
+                        
                     }
                 }
             }
+            // print_r($array_kualifikasi_absen);
         }
     }
 
@@ -708,6 +935,20 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
     }
 }
 
+function resetData(){
+    global $array_kualifikasi_bayar;
+    global $array_hasil_bayar;
+
+    global $array_kualifikasi_absen;
+    global $array_hasil_absen;
+    
+    $array_kualifikasi_bayar = [];
+    $array_hasil_bayar = [];
+    
+    $array_kualifikasi_absen = [];
+    $array_hasil_absen = [];
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -754,26 +995,6 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
 
                     <!-- query ambil data -->
                     <?php
-
-                    //Cek kualifikasi
-                    if (substr($tanggal, 5) >= 1 && substr($tanggal, 5) <= 3) {
-                        //UTS
-                        kualifikasiBayar(1, 3);
-                        kualifikasiAbsen(1, 3);
-                    } else if (substr($tanggal, 5) >= 4 && substr($tanggal, 5) <= 6) {
-                        //UAS
-                        kualifikasiBayar(4, 6);
-                        kualifikasiAbsen(4, 6);
-                    } elseif (substr($tanggal, 5) >= 7 && substr($tanggal, 5) <= 9) {
-                        //UTS
-                        kualifikasiBayar(7, 9);
-                        kualifikasiAbsen(7, 9);
-                    } elseif (substr($tanggal, 5) >= 10 && substr($tanggal, 5) <= 12) {
-                        //UAS
-                        kualifikasiBayar(10, 12);
-                        kualifikasiAbsen(10, 12);
-                    }
-
                     $sql = "SELECT * FROM kelas
                     ORDER BY nama_kelas ASC";
                     $res = mysqli_query($link, $sql);
@@ -793,6 +1014,25 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                     ORDER BY nama ASC";
                             $res = mysqli_query($link, $sql);
                             $found = mysqli_num_rows($res);
+
+                            //Cek kualifikasi
+                            if (substr($tanggal, 5) >= 1 && substr($tanggal, 5) <= 3) {
+                                //UTS
+                                kualifikasiBayar(1, 3, $nama_kelas[$jml_kelas]);
+                                kualifikasiAbsen(1, 3, $nama_kelas[$jml_kelas]);
+                            } else if (substr($tanggal, 5) >= 4 && substr($tanggal, 5) <= 6) {
+                                //UAS
+                                kualifikasiBayar(4, 6, $nama_kelas[$jml_kelas]);
+                                kualifikasiAbsen(4, 6, $nama_kelas[$jml_kelas]);
+                            } elseif (substr($tanggal, 5) >= 7 && substr($tanggal, 5) <= 9) {
+                                //UTS
+                                kualifikasiBayar(7, 9, $nama_kelas[$jml_kelas]);
+                                kualifikasiAbsen(7, 9, $nama_kelas[$jml_kelas]);
+                            } elseif (substr($tanggal, 5) >= 10 && substr($tanggal, 5) <= 12) {
+                                //UAS
+                                kualifikasiBayar(10, 12, $nama_kelas[$jml_kelas]);
+                                kualifikasiAbsen(10, 12, $nama_kelas[$jml_kelas]);
+                            }
 
                     ?>
                     <!-- end query ambil data -->
@@ -847,12 +1087,16 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 $i = 0;
                                                 while ($i < sizeof($array_hasil_bayar)) {
                                                     if ($array_hasil_bayar[$i]["nis"] == $data['nis']) {
-                                                        if($array_hasil_bayar[$i]["hasil"] == "Ada tunggakan"){
+                                                        $kesimpulan_bayar = $array_hasil_bayar[$i]["hasil"];
+                                                        if($kesimpulan_bayar == "Ada tunggakan"){
                                                             $setMinus = $array_hasil_bayar[$i]["kurang"];
-                                                            $hasil_bayar = false;
-                                                        }else{
+                                                            $hasil_bayar = "00";
+                                                        }else if($kesimpulan_bayar == "Ada tunggakan, tapi boleh ikut ujian") {
+                                                            $setMinus = $array_hasil_bayar[$i]["kurang"];
+                                                            $hasil_bayar = "01";
+                                                        }else if($kesimpulan_bayar == "Tidak ada tunggakan"){
                                                             $setMinus = 0;
-                                                            $hasil_bayar = true;
+                                                            $hasil_bayar = "10";
                                                         }
                                                         // break;
                                                     }
@@ -989,22 +1233,22 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                     $j++;
                                                 }
 
-                                                if(!$hasil_bayar){
+                                                if($hasil_bayar == "00"){
                                         ?>
                                                 <tr> <center>
                                                     <td><?php echo "$data[nis]"; ?></td>
                                                     <td><?php echo "$data[nama]"; ?></td>
-                                                    <!-- <td style="background-color:#ff0000;"><?php //echo "Ada Tunggakan"; ?></td>
-                                                    <td style="background-color:#ff0000;"><?php //echo $setMinus; ?></td> -->
-                                                    <td><?php echo "Ada Tunggakan"; ?></td>
-                                                    <td><?php echo $setMinus; ?></td>
+                                                    <td style="background-color:#DC5463; color:white;"><?php echo $kesimpulan_bayar; ?></td>
+                                                    <td style="background-color:#DC5463; color:white;"><?php echo $setMinus; ?></td>
+                                                    <!-- <td><?php //echo "Ada Tunggakan"; ?></td>
+                                                    <td><?php //echo $setMinus; ?></td> -->
                                                 <!-- matematika -->
                                                 <?php
                                                     if(!$hasil_akhir_mtk){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1012,10 +1256,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- pjok -->
                                                 <?php
                                                     if(!$hasil_akhir_pjok){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1023,10 +1267,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- bhs. indonesia -->
                                                 <?php
                                                     if(!$hasil_akhir_ind){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1034,10 +1278,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- bhs. inggris -->
                                                 <?php
                                                     if(!$hasil_akhir_ing){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1045,10 +1289,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- bhs. sunda -->
                                                 <?php
                                                     if(!$hasil_akhir_sund){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1056,10 +1300,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- seni budaya -->
                                                 <?php
                                                     if(!$hasil_akhir_senbud){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1069,23 +1313,23 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                     if(substr($nama_kelas[$jml_kelas],0,1) == "9"){
                                                         if($data['Agama'] == "ISLAM"){
                                                             if(!$hasil_akhir_agama){ ?>
-                                                                <td>&#10006;</td>
-                                                                <td>-</td>
+                                                                <td style="background-color:#DC5463; color:white;">&#10006;</td>
+                                                                <td style="background-color:#DC5463; color:white;">-</td>
                                                             <?php        
                                                                 }else{ ?>
-                                                                    <td>&#10004;</td>
-                                                                    <td>-</td>
+                                                                    <td style="background-color:#DC5463; color:white;">&#10004;</td>
+                                                                    <td style="background-color:#DC5463; color:white;">-</td>
                                                             <?php
                                                                 }
                                                              
                                                         }else if($data['Agama'] == "PROTESTAN"){
                                                             if(!$hasil_akhir_agama){ ?>
-                                                                <td>-</td>
-                                                                <td>&#10006;</td>
+                                                                <td style="background-color:#DC5463; color:white;">-</td>
+                                                                <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                             <?php        
                                                                 }else{ ?>
-                                                                    <td>-</td>
-                                                                    <td>&#10004;</td>
+                                                                    <td style="background-color:#DC5463; color:white;">-</td>
+                                                                    <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                             <?php
                                                                 }
                                                         }
@@ -1095,10 +1339,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- ipa -->
                                                 <?php
                                                     if(!$hasil_akhir_ipa){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1106,10 +1350,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- pkn -->
                                                 <?php
                                                     if(!$hasil_akhir_pkn){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1117,31 +1361,31 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- ips -->
                                                 <?php
                                                     if(!$hasil_akhir_ips){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#DC5463; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
                     
                                                 <?php
-                                                }else{ //kalo gaada tunggakan.. untuk hasil akhir, hapus dari else...
+                                                }else if($hasil_bayar == "10"){ //kalo gaada tunggakan.. untuk hasil akhir, hapus dari else...
                                                     ?>
                                                 <tr>
                                                     <td><?php echo "$data[nis]"; ?></td>
                                                     <td><?php echo "$data[nama]"; ?></td>
-                                                    <!-- <td style="background-color:#ff0000;"><?php //echo "Ada Tunggakan"; ?></td>
-                                                    <td style="background-color:#ff0000;"><?php //echo $setMinus; ?></td> -->
-                                                    <td><?php echo "Tidak ada Tunggakan"; ?></td>
-                                                    <td><?php echo $setMinus; ?></td>
+                                                    <td style="background-color:#54DCCD; color:white;"><?php echo $kesimpulan_bayar; ?></td>
+                                                    <td style="background-color:#54DCCD; color:white;"><?php echo $setMinus; ?></td>
+                                                    <!-- <td><?php //echo "Tidak ada Tunggakan"; ?></td>
+                                                    <td><?php //echo $setMinus; ?></td> -->
                                                 <!-- matematika -->
                                                 <?php
                                                     if(!$hasil_akhir_mtk){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1149,10 +1393,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- pjok -->
                                                 <?php
                                                     if(!$hasil_akhir_pjok){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1160,10 +1404,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- bhs. indonesia -->
                                                 <?php
                                                     if(!$hasil_akhir_ind){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1171,10 +1415,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- bhs. inggris -->
                                                 <?php
                                                     if(!$hasil_akhir_ing){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1182,10 +1426,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- bhs. sunda -->
                                                 <?php
                                                     if(!$hasil_akhir_sund){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1193,10 +1437,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- seni budaya -->
                                                 <?php
                                                     if(!$hasil_akhir_senbud){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1206,23 +1450,23 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                     if(substr($nama_kelas[$jml_kelas],0,1) == "9"){
                                                         if($data['Agama'] == "ISLAM"){
                                                             if(!$hasil_akhir_agama){ ?>
-                                                                <td>&#10006;</td>
-                                                                <td>-</td>
+                                                                <td style="background-color:#54DCCD; color:white;">&#10006;</td>
+                                                                <td style="background-color:#54DCCD; color:white;">-</td>
                                                             <?php        
                                                                 }else{ ?>
-                                                                    <td>&#10004;</td>
-                                                                    <td>-</td>
+                                                                    <td style="background-color:#54DCCD; color:white;">&#10004;</td>
+                                                                    <td style="background-color:#54DCCD; color:white;">-</td>
                                                             <?php
                                                                 }
                                                              
                                                         }else if($data['Agama'] == "PROTESTAN"){
                                                             if(!$hasil_akhir_agama){ ?>
-                                                                <td>-</td>
-                                                                <td>&#10006;</td>
+                                                                <td style="background-color:#54DCCD; color:white;">-</td>
+                                                                <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                             <?php        
                                                                 }else{ ?>
-                                                                    <td>-</td>
-                                                                    <td>&#10004;</td>
+                                                                    <td style="background-color:#54DCCD; color:white;">-</td>
+                                                                    <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                             <?php
                                                                 }
                                                         }
@@ -1232,10 +1476,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- ipa -->
                                                 <?php
                                                     if(!$hasil_akhir_ipa){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1243,10 +1487,10 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- pkn -->
                                                 <?php
                                                     if(!$hasil_akhir_pkn){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                 <?php
                                                     }
                                                 ?>
@@ -1254,16 +1498,152 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 <!-- ips -->
                                                 <?php
                                                     if(!$hasil_akhir_ips){ ?>
-                                                        <td>&#10006;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10006;</td>
                                                 <?php        
                                                     }else{ ?>
-                                                        <td>&#10004;</td>
+                                                        <td style="background-color:#54DCCD; color:white;">&#10004;</td>
                                                 <?php
                                                     }
 
-                                                } // ...sampe sini
+                                                }else if($hasil_bayar == "01"){
+                                                    ?>
+                                                <tr>
+                                                    <td><?php echo "$data[nis]"; ?></td>
+                                                    <td><?php echo "$data[nama]"; ?></td>
+                                                    <td style="background-color:#CDB70A; color:white;"><?php echo $kesimpulan_bayar; ?></td>
+                                                    <td style="background-color:#CDB70A; color:white;"><?php echo $setMinus; ?></td>
+                                                    <!-- <td><?php //echo "Tidak ada Tunggakan"; ?></td>
+                                                    <td><?php //echo $setMinus; ?></td> -->
+                                                <!-- matematika -->
+                                                <?php
+                                                    if(!$hasil_akhir_mtk){ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                <?php        
+                                                    }else{ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                <?php
+                                                    }
+                                                ?>
 
-                                                $setMinus = 300000;
+                                                <!-- pjok -->
+                                                <?php
+                                                    if(!$hasil_akhir_pjok){ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                <?php        
+                                                    }else{ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                <?php
+                                                    }
+                                                ?>
+
+                                                <!-- bhs. indonesia -->
+                                                <?php
+                                                    if(!$hasil_akhir_ind){ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                <?php        
+                                                    }else{ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                <?php
+                                                    }
+                                                ?>
+
+                                                <!-- bhs. inggris -->
+                                                <?php
+                                                    if(!$hasil_akhir_ing){ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                <?php        
+                                                    }else{ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                <?php
+                                                    }
+                                                ?>
+
+                                                <!-- bhs. sunda -->
+                                                <?php
+                                                    if(!$hasil_akhir_sund){ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                <?php        
+                                                    }else{ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                <?php
+                                                    }
+                                                ?>
+
+                                                <!-- seni budaya -->
+                                                <?php
+                                                    if(!$hasil_akhir_senbud){ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                <?php        
+                                                    }else{ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                <?php
+                                                    }
+                                                ?>
+
+                                                <!-- agama -->
+                                                <?php
+                                                    if(substr($nama_kelas[$jml_kelas],0,1) == "9"){
+                                                        if($data['Agama'] == "ISLAM"){
+                                                            if(!$hasil_akhir_agama){ ?>
+                                                                <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                                <td style="background-color:#CDB70A; color:white;">-</td>
+                                                            <?php        
+                                                                }else{ ?>
+                                                                    <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                                    <td style="background-color:#CDB70A; color:white;">-</td>
+                                                            <?php
+                                                                }
+                                                             
+                                                        }else if($data['Agama'] == "PROTESTAN"){
+                                                            if(!$hasil_akhir_agama){ ?>
+                                                                <td style="background-color:#CDB70A; color:white;">-</td>
+                                                                <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                            <?php        
+                                                                }else{ ?>
+                                                                    <td style="background-color:#CDB70A; color:white;">-</td>
+                                                                    <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                            <?php
+                                                                }
+                                                        }
+                                                    }
+                                                ?>   
+
+                                                <!-- ipa -->
+                                                <?php
+                                                    if(!$hasil_akhir_ipa){ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                <?php        
+                                                    }else{ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                <?php
+                                                    }
+                                                ?>
+
+                                                <!-- pkn -->
+                                                <?php
+                                                    if(!$hasil_akhir_pkn){ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                <?php        
+                                                    }else{ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                <?php
+                                                    }
+                                                ?>
+
+                                                <!-- ips -->
+                                                <?php
+                                                    if(!$hasil_akhir_ips){ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10006;</td>
+                                                <?php        
+                                                    }else{ ?>
+                                                        <td style="background-color:#CDB70A; color:white;">&#10004;</td>
+                                                <?php
+                                                    }
+                                                    
+                                                } // ...sampe sini
+                                                // print_r($array_hasil_absen);
+
+                                                $setMinus = 600000;
 
                                                 $hasil_akhir_mtk = false;
                                                 $hasil_akhir_pjok = false;
@@ -1276,7 +1656,8 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                                                 $hasil_akhir_ips = false;
                                                 $hasil_akhir_pkn = false;
 
-                                                $hasil_bayar = false;
+                                                $kesimpulan_bayar = "Ada tunggakan";
+                                                $hasil_bayar = "00";
 
                                             }
                                         } else { ?>
@@ -1295,7 +1676,17 @@ function kualifikasiAbsen($awalBulan, $akhirBulan)
                     </div>
                     <!-- end tabel pembayaran -->
                     <?php
-
+                            // echo "array sebelum di reset <BR>";
+                            // print_r($array_kualifikasi_absen); echo "<BR>";
+                            // print_r($array_hasil_absen); echo "<BR>";
+                            // echo "hasil bayar "; print_r($array_hasil_bayar); echo "<BR>";
+                            // echo "kualifikasi bayar "; print_r($array_kualifikasi_bayar); echo "<BR>";
+                            // resetData();
+                            // echo "array setelah di reset <BR>";
+                            // print_r($array_kualifikasi_absen); echo "<BR>";
+                            // print_r($array_hasil_absen); echo "<BR>";
+                            // print_r($array_hasil_bayar); echo "<BR>";
+                            // print_r($array_kualifikasi_bayar); echo "<BR>";
                             $jml_kelas++;
                         }
                     }
